@@ -1,8 +1,12 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/theme-provider';
+import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
+import { useRealTime } from '@/hooks/useRealTime';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import {
   Home,
   LayoutDashboard,
@@ -14,8 +18,19 @@ import {
   Sun,
   Moon,
   Clock,
-  ChevronDown
+  ChevronDown,
+  DollarSign,
+  LogOut,
+  User
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NavItem = ({ icon: Icon, label, href, active, onClick, id, className }) => {
   return (
@@ -38,10 +53,22 @@ const NavItem = ({ icon: Icon, label, href, active, onClick, id, className }) =>
 
 const Navbar = ({ className }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { openPendingPayments } = usePendingPayments();
+  const { isAuthenticated, currentUser, logout, isAdmin } = useAuth();
   const [time, setTime] = React.useState('');
   const [date, setDate] = React.useState('');
   const [activeTab, setActiveTab] = React.useState('home');
+
+  // Fetch pending payments count
+  const {
+    data: pendingPayments = [],
+    loading: pendingPaymentsLoading
+  } = useRealTime('sessions', {
+    fetchInitial: true,
+    filter: '(payment_type = "Post-paid" && status = "Active") || (status = "Closed" && amount_paid < total_amount)'
+  });
 
   // Set active tab based on current path
   React.useEffect(() => {
@@ -71,6 +98,21 @@ const Navbar = ({ className }) => {
   // Toggle theme
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    console.log("Logout button clicked");
+    try {
+      // The logout function in AuthContext handles everything:
+      // - Updating login logs
+      // - Clearing auth state
+      // Pass the navigate function for redirection
+      await logout(navigate);
+      console.log("Logout successful");
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   return (
@@ -133,14 +175,6 @@ const Navbar = ({ className }) => {
             active={activeTab === 'users'}
             onClick={setActiveTab}
           />
-          <NavItem
-            href="/settings"
-            icon={Settings}
-            label="SETTINGS"
-            id="settings"
-            active={activeTab === 'settings'}
-            onClick={setActiveTab}
-          />
         </div>
       </nav>
 
@@ -159,16 +193,65 @@ const Navbar = ({ className }) => {
           <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive"></span>
         </Button>
 
-        <div className="flex items-center border-l border-border pl-4 ml-2">
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium mr-1">Payments</span>
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs">
-              3
+        <div className="flex items-center border-l border-border pl-4 ml-2 gap-3">
+          <Button
+            variant="outline"
+            onClick={openPendingPayments}
+            className="flex items-center gap-2"
+          >
+            <DollarSign className="h-4 w-4" />
+            <span>Pending Payments</span>
+            {pendingPayments.length > 0 && (
+              <span className="bg-primary text-primary-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs">
+                {pendingPayments.length}
+              </span>
+            )}
+          </Button>
+
+          {isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border-r pr-2">
+                <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium">{currentUser?.username || 'User'}</span>
+                  {currentUser?.role && (
+                    <span className={`text-[10px] px-1 rounded ${currentUser.role === 'Admin'
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                      }`}>
+                      {currentUser.role}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => navigate('/settings')}
+              >
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 flex items-center gap-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log("Logout button clicked");
+                  handleLogout();
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="h-5 w-5 p-0 ml-1">
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
     </header>

@@ -46,7 +46,7 @@
 		"frontendLibrary": {
 			"patchFile": "./index.html",
 			"projectPath": "./",
-			"devUrl": "http://localhost:5173",
+			"devUrl": "http://localhost:5171",
 			"devCommand": "yarn vite-dev",
 			"buildCommand": "yarn vite-build"
 		}

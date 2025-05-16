@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, Outlet, RouterProvider, Navigate } from 'react-router-dom';
 import { app, events, init, window as neuWindow } from '@neutralinojs/lib';
 import './index.css';
 import { ThemeProvider } from './components/theme-provider';
@@ -14,11 +14,46 @@ import SettingsPage from './pages/(app)/settings/page';
 import LoginPage from './pages/(auth)/login/page';
 import RegisterPage from './pages/(auth)/register/page';
 import IndexPage from './pages/page';
+import { Toaster } from 'sonner';
+import { AuthProvider } from './contexts/AuthContext';
+
+// Import PocketBase client
+import pb from './lib/pocketbase/pb';
+
+// Auth check component that uses PocketBase's auth store directly
+const RequireAuth = ({ children }) => {
+	// Check if user is authenticated using PocketBase's auth store
+	const isAuthenticated = pb.authStore.isValid;
+
+	console.log("Auth check - isAuthenticated:", isAuthenticated);
+	console.log("Auth check - user:", pb.authStore.model);
+
+	// Redirect to login page if not authenticated
+	if (!isAuthenticated) {
+		console.log("Not authenticated, redirecting to login");
+		return <Navigate to="/auth/login" replace />;
+	}
+
+	// Check if the user has the Admin role
+	const userRole = pb.authStore.model?.role;
+	const isAdmin = userRole === "Admin";
+
+	console.log("Auth check - userRole:", userRole, "isAdmin:", isAdmin);
+
+	// Redirect to login if not an admin
+	if (!isAdmin) {
+		console.log("Not an admin, redirecting to login");
+		pb.authStore.clear(); // Clear the auth store
+		return <Navigate to="/auth/login" replace />;
+	}
+
+	return children;
+};
 
 const router = createMemoryRouter([
 	{
 		path: '/',
-		element: <Layout />,
+		element: <RequireAuth><Layout /></RequireAuth>,
 		children: [
 			{ index: true, element: <IndexPage /> },
 			{ path: 'dashboard', element: <DashboarPage /> },
@@ -38,6 +73,11 @@ const router = createMemoryRouter([
 			{ path: 'login', element: <LoginPage /> },
 			{ path: 'register', element: <RegisterPage /> }
 		]
+	},
+	// Catch-all route to redirect to login
+	{
+		path: '*',
+		element: <Navigate to="/auth/login" replace />
 	}
 ]);
 
@@ -72,11 +112,30 @@ const router = createMemoryRouter([
 
 	init();
 
+	// Create a wrapper component that provides both the router and auth context
+	const App = () => {
+		// Check if the user is already authenticated
+		const initialEntry = pb.authStore.isValid ? '/' : '/auth/login';
+		console.log("Initial entry:", initialEntry);
+
+		// Create a router instance with the initial entry
+		const routerInstance = createMemoryRouter(router.routes, {
+			initialEntries: [initialEntry]
+		});
+
+		return (
+			<ThemeProvider defaultTheme="dark">
+				<Toaster position="top-right" theme="dark" richColors />
+				<AuthProvider>
+					<RouterProvider router={routerInstance} />
+				</AuthProvider>
+			</ThemeProvider>
+		);
+	};
+
 	ReactDOM.createRoot(document.getElementById('root')).render(
 		<React.StrictMode>
-			<ThemeProvider defaultTheme="dark">
-				<RouterProvider router={router} />
-			</ThemeProvider>
+			<App />
 		</React.StrictMode>
 	);
 
