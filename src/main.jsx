@@ -16,6 +16,7 @@ import RegisterPage from './pages/(auth)/register/page';
 import IndexPage from './pages/page';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
+import { startPocketBaseServer, stopPocketBaseServer, isPocketBaseServerRunning } from './utils/pocketbase-server';
 
 // Import PocketBase client
 import pb from './lib/pocketbase/pb';
@@ -110,7 +111,27 @@ const router = createMemoryRouter([
 		}
 	}
 
+	// Initialize Neutralino
 	init();
+
+	// Start PocketBase server
+	try {
+		// Check if PocketBase is already running
+		const isRunning = await isPocketBaseServerRunning();
+		if (isRunning) {
+			console.log('PocketBase server is already running');
+		} else {
+			console.log('Starting PocketBase server...');
+			const pid = await startPocketBaseServer();
+			if (pid) {
+				console.log('PocketBase server started with PID:', pid);
+			} else {
+				console.error('Failed to start PocketBase server');
+			}
+		}
+	} catch (error) {
+		console.error('Error starting PocketBase server:', error);
+	}
 
 	// Create a wrapper component that provides both the router and auth context
 	const App = () => {
@@ -139,7 +160,25 @@ const router = createMemoryRouter([
 		</React.StrictMode>
 	);
 
-	events.on('windowClose', () => app.exit());
+	// Handle window close event
+	events.on('windowClose', async () => {
+		// Stop PocketBase server before exiting
+		try {
+			console.log('Stopping PocketBase server before exit...');
+			const stopped = await stopPocketBaseServer();
+			if (stopped) {
+				console.log('PocketBase server stopped successfully');
+			} else {
+				console.warn('Failed to stop PocketBase server');
+			}
+		} catch (error) {
+			console.error('Error stopping PocketBase server:', error);
+		}
 
+		// Exit the application
+		app.exit();
+	});
+
+	// Focus the window
 	neuWindow.focus();
 })();

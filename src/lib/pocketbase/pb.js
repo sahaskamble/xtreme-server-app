@@ -1,11 +1,17 @@
 import PocketBase from 'pocketbase';
+import { PB_URL } from '../constant/url';
+// import { getPocketBaseUrl } from '../../utils/pocketbase-server';
 
-const pb = new PocketBase('http://127.0.0.1:8090');
+// Create PocketBase client with the URL from our server utility
+const pb = new PocketBase(PB_URL);
 
+// Disable auto-cancellation for better control over requests
 pb.autoCancellation(false);
+
+// Log authentication changes
 pb.authStore.onChange((e) => {
-  console.log(pb.authStore.isValid);
-  console.log(e);
-})
+  console.log('Auth state changed - isValid:', pb.authStore.isValid);
+  console.log('Auth event:', e);
+});
 
 export default pb;

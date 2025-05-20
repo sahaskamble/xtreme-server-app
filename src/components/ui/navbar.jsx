@@ -21,8 +21,10 @@ import {
   ChevronDown,
   DollarSign,
   LogOut,
-  User
+  User,
+  Database
 } from 'lucide-react';
+import { ServerStatus } from './server-status';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -175,6 +177,14 @@ const Navbar = ({ className }) => {
             active={activeTab === 'users'}
             onClick={setActiveTab}
           />
+          <NavItem
+            href="/settings"
+            icon={Settings}
+            label="SETTINGS"
+            id="settings"
+            active={activeTab === 'settings'}
+            onClick={setActiveTab}
+          />
         </div>
       </nav>
 
@@ -188,10 +198,7 @@ const Navbar = ({ className }) => {
           {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative h-8 w-8 p-0">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive"></span>
-        </Button>
+        <ServerStatus />
 
         <div className="flex items-center border-l border-border pl-4 ml-2 gap-3">
           <Button
@@ -226,16 +233,6 @@ const Navbar = ({ className }) => {
                   )}
                 </div>
               </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => navigate('/settings')}
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Button>
 
               <Button
                 variant="ghost"
