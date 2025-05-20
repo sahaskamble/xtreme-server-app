@@ -1,5 +1,3 @@
-'use client'
-
 import { Button } from "@/components/ui/button"
 import { RefreshCw, BarChart } from "lucide-react"
 import { motion } from "framer-motion"

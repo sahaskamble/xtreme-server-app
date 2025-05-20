@@ -1,5 +1,3 @@
-'use client';
-
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldUser, UserCog, Users } from "lucide-react";
 import React, { useEffect, useState } from 'react'

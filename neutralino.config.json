@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"defaultMode": "window",
 	"documentRoot": "/dist/",
+	"port": 3000,
 	"url": "/",
 	"enableServer": true,
 	"enableNativeAPI": true,

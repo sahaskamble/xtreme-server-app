@@ -1,4 +1,16 @@
-import { os, app, events, filesystem } from '@neutralinojs/lib';
+// Import Neutralino libraries with error handling
+let os, app, events, filesystem;
+try {
+  const neutralino = import.meta.env.DEV ? await import('@neutralinojs/lib') : null;
+  if (neutralino) {
+    os = neutralino.os;
+    app = neutralino.app;
+    events = neutralino.events;
+    filesystem = neutralino.filesystem;
+  }
+} catch (error) {
+  console.warn('Neutralino libraries not available:', error.message);
+}
 
 // Configuration for PocketBase
 const POCKETBASE_CONFIG = {
@@ -17,6 +29,12 @@ const POCKETBASE_CONFIG = {
  * @returns {Promise<number|null>} Process ID or null if failed
  */
 export async function startPocketBaseServer() {
+  // Check if Neutralino libraries are available
+  if (!os || !app || !filesystem) {
+    console.warn('Neutralino libraries not available, cannot start PocketBase server');
+    return null;
+  }
+
   try {
     // Get the application directory
     const appPath = await app.getPath();
@@ -67,9 +85,11 @@ export async function startPocketBaseServer() {
     await app.setGlobalProperty(POCKETBASE_CONFIG.pidStorageKey, process.pid);
 
     // Register app exit handler to kill PocketBase when the app exits
-    events.on('appExit', () => {
-      stopPocketBaseServer().catch(console.error);
-    });
+    if (events) {
+      events.on('appExit', () => {
+        stopPocketBaseServer().catch(console.error);
+      });
+    }
 
     return process.pid;
   } catch (error) {

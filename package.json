@@ -7,7 +7,7 @@
 		"start": "WEBKIT_DISABLE_DMABUF_RENDERER=1 neu run -- --window-enable-inspector=true",
 		"build": "neu build",
 		"vite-dev": "vite",
-		"vite-build": "NODE_ENV=production vite build"
+		"vite-build": "vite build"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.0.1",

@@ -1,5 +1,3 @@
-'use client'
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
@@ -59,21 +57,19 @@ export default function LogsActivityChart({ data }) {
             <div className="flex gap-1">
               <button
                 onClick={() => setChartType("line")}
-                className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                  chartType === "line"
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${chartType === "line"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                  }`}
               >
                 Line
               </button>
               <button
                 onClick={() => setChartType("area")}
-                className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                  chartType === "area"
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${chartType === "area"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                  }`}
               >
                 Area
               </button>
@@ -89,24 +85,24 @@ export default function LogsActivityChart({ data }) {
               >
                 <defs>
                   <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSnacksSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSnacksMaintenance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a569bd" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#a569bd" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#a569bd" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#a569bd" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ffc658" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ffc658" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ffc658" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#ffc658" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorDevices" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff6b6b" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ff6b6b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ff6b6b" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#ff6b6b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -167,24 +163,24 @@ export default function LogsActivityChart({ data }) {
               >
                 <defs>
                   <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSnacksSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSnacksMaintenance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a569bd" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#a569bd" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#a569bd" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#a569bd" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ffc658" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ffc658" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ffc658" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#ffc658" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorDevices" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff6b6b" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#ff6b6b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ff6b6b" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#ff6b6b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />

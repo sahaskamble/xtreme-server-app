@@ -82,56 +82,59 @@ const router = createMemoryRouter([
 	}
 ]);
 
-(async function() {
+(async function () {
+	// Only try to load Neutralino auth info in development mode
 	if (import.meta.env.DEV && !window.NL_TOKEN) {
 		try {
-			// method 1
+			// method 1: Try to get token from session storage
 			const storedToken = sessionStorage.getItem('NL_TOKEN');
 			if (storedToken) {
 				window.NL_TOKEN = storedToken;
 			} else {
-				// method 2
-				const authInfo = await import('../.tmp/auth_info.json');
-				const { nlToken, nlPort } = authInfo;
-				window.NL_PORT = nlPort;
-				window.NL_TOKEN = nlToken;
-				window.NL_ARGS = [
-					'bin\\neutralino-win_x64.exe',
-					'',
-					'--load-dir-res',
-					'--path=.',
-					'--export-auth-info',
-					'--neu-dev-extension',
-					'--neu-dev-auto-reload',
-					'--window-enable-inspector',
-				];
+				// method 2: Try to import auth info file
+				try {
+					const authInfo = await import('../.tmp/auth_info.json');
+					if (authInfo && authInfo.nlToken) {
+						window.NL_TOKEN = authInfo.nlToken;
+
+						// Only set NL_PORT if it exists in the auth info
+						if (authInfo.nlPort) {
+							window.NL_PORT = authInfo.nlPort;
+						}
+
+						window.NL_ARGS = [
+							'bin\\neutralino-win_x64.exe',
+							'',
+							'--load-dir-res',
+							'--path=.',
+							'--export-auth-info',
+							'--neu-dev-extension',
+							'--neu-dev-auto-reload',
+							'--window-enable-inspector',
+						];
+					}
+				} catch (importError) {
+					console.warn('Auth info file not found, native API calls may not work in dev mode.');
+				}
 			}
-		} catch {
-			console.error('Auth file not found, native API calls will not work.');
+		} catch (error) {
+			console.error('Error setting up Neutralino auth:', error);
 		}
 	}
 
-	// Initialize Neutralino
-	init();
-
-	// Start PocketBase server
+	// Initialize Neutralino if we're in the Neutralino environment
 	try {
-		// Check if PocketBase is already running
-		const isRunning = await isPocketBaseServerRunning();
-		if (isRunning) {
-			console.log('PocketBase server is already running');
+		// Check if we're in a Neutralino environment
+		if (window.NL_TOKEN || !import.meta.env.DEV) {
+			init();
+			console.log('Neutralino initialized successfully');
 		} else {
-			console.log('Starting PocketBase server...');
-			const pid = await startPocketBaseServer();
-			if (pid) {
-				console.log('PocketBase server started with PID:', pid);
-			} else {
-				console.error('Failed to start PocketBase server');
-			}
+			console.log('Not in Neutralino environment, skipping initialization');
 		}
 	} catch (error) {
-		console.error('Error starting PocketBase server:', error);
+		console.error('Error initializing Neutralino:', error);
 	}
+
 
 	// Create a wrapper component that provides both the router and auth context
 	const App = () => {
@@ -160,25 +163,32 @@ const router = createMemoryRouter([
 		</React.StrictMode>
 	);
 
-	// Handle window close event
-	events.on('windowClose', async () => {
-		// Stop PocketBase server before exiting
-		try {
-			console.log('Stopping PocketBase server before exit...');
-			const stopped = await stopPocketBaseServer();
-			if (stopped) {
-				console.log('PocketBase server stopped successfully');
-			} else {
-				console.warn('Failed to stop PocketBase server');
-			}
-		} catch (error) {
-			console.error('Error stopping PocketBase server:', error);
+	// Handle window close event only if we're in the Neutralino environment
+	try {
+		if (window.NL_TOKEN || !import.meta.env.DEV) {
+			events.on('windowClose', async () => {
+				// Stop PocketBase server before exiting
+				try {
+					console.log('Stopping PocketBase server before exit...');
+					const stopped = await stopPocketBaseServer();
+					if (stopped) {
+						console.log('PocketBase server stopped successfully');
+					} else {
+						console.warn('Failed to stop PocketBase server');
+					}
+				} catch (error) {
+					console.error('Error stopping PocketBase server:', error);
+				}
+
+				// Exit the application
+				app.exit();
+			});
+
+			// Focus the window
+			neuWindow.focus();
+			console.log('Neutralino window event handlers registered');
 		}
-
-		// Exit the application
-		app.exit();
-	});
-
-	// Focus the window
-	neuWindow.focus();
+	} catch (error) {
+		console.error('Error setting up Neutralino window events:', error);
+	}
 })();

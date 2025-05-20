@@ -1,5 +1,3 @@
-'use client'
-
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
@@ -41,8 +39,8 @@ export default function PeakHoursChart({ sessions, isLoading }) {
     const formatHour = (date) => {
       const hours = date.getHours()
       return hours === 0 ? '12AM' :
-             hours === 12 ? '12PM' :
-             hours < 12 ? `${hours}AM` : `${hours-12}PM`
+        hours === 12 ? '12PM' :
+          hours < 12 ? `${hours}AM` : `${hours - 12}PM`
     }
 
     // Initialize hourly data
