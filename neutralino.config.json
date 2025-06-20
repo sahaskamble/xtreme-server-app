@@ -7,14 +7,14 @@
 	"url": "/",
 	"enableServer": true,
 	"enableNativeAPI": true,
-	"tokenSecurity": "none", 
+	"tokenSecurity": "none",
 	"logging": {
 		"enabled": true,
 		"writeToLogFile": true
 	},
 	"nativeAllowList": [
 		"filesystem.*",
-		"window.focus",
+		"window.*",
 		"app.exit"
 	],
 	"globalVariables": {
@@ -22,24 +22,24 @@
 	},
 	"modes": {
 		"window": {
-			"title": "neutralinojs",
-			"width": 800,
-			"height": 500,
-			"minWidth": 400,
-			"minHeight": 200,
-			"fullScreen": false,
-			"alwaysOnTop": false,
+			"title": "Gaming Cafe Management System",
+			"width": 1200,
+			"height": 800,
+			"minWidth": 800,
+			"minHeight": 600,
 			"icon": "/public/neutralino.png",
 			"enableInspector": false,
-			"borderless": false,
 			"maximize": false,
 			"hidden": false,
 			"resizable": true,
-			"exitProcessOnClose": false
+			"exitProcessOnClose": true,
+			"fullScreen": false,
+			"alwaysOnTop": false,
+			"center": true
 		}
 	},
 	"cli": {
-		"binaryName": "neutralinojs",
+		"binaryName": "Xpanel-server",
 		"resourcesPath": "/dist/",
 		"extensionsPath": "/extensions/",
 		"binaryVersion": "5.1.0",

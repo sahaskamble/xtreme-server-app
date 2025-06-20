@@ -83,6 +83,7 @@ import { usePocketBase } from '@/hooks/usePocketBase'
 import { useRealTime, useRealTimeRecord } from '@/hooks/useRealTime'
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext'
 import { toast, Toaster } from "sonner"
+import AddCustomerDialog from '@/components/dialogs/AddCustomerDialog'
 
 export default function IndexPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -111,6 +112,9 @@ export default function IndexPage() {
 
   const [sessionFormError, setSessionFormError] = useState("");
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Customer dialog state
+  const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
 
   // Use pending payments context
   const { pendingPaymentsOpen, setPendingPaymentsOpen } = usePendingPayments();
@@ -353,10 +357,15 @@ export default function IndexPage() {
       // Update the device with token and client information in PocketBase
       if (sessionDevice?.id) {
         try {
-          // Extract relevant client information from the auth result
+          // Create comprehensive client information object
           const clientInfo = {
             token: loginInfo.token,
-            record: JSON.stringify(authData.record)
+            client_id: authData.record.id,
+            client_username: authData.record.username,
+            client_name: authData.record.name || clientUsername,
+            client_email: authData.record.email || '',
+            login_time: new Date().toISOString(),
+            client_record: JSON.stringify(authData.record)
           };
 
           // Update the device record with client information
@@ -365,6 +374,8 @@ export default function IndexPage() {
           console.log(`Updated device ${sessionDevice.id} with client information:`, clientInfo);
         } catch (deviceUpdateError) {
           console.error("Error updating device with client information:", deviceUpdateError);
+          console.error("This error likely means the device schema is missing required fields.");
+          console.error("Please check fix-device-token-schema.md for instructions to fix this.");
           // Continue with login process even if device update fails
         }
       }
@@ -465,15 +476,26 @@ export default function IndexPage() {
         out_time: currentTime
       });
 
-      // Update the device status back to Available
+      // Clear client information from device and update status to Available
       await updateRecord('devices', device.id, {
         status: 'Available',
-        current_session: null
+        current_session: null,
+        token: null,
+        client_id: null,
+        client_username: null,
+        client_name: null,
+        client_email: null,
+        login_time: null,
+        client_record: null
       });
 
       console.log(`Session ${device.current_session} stopped successfully`);
+      console.log(`Cleared client information from device ${device.name}`);
     } catch (err) {
       console.error("Error stopping session:", err);
+      if (err.message && err.message.includes('no such column')) {
+        console.error("Device schema is missing client fields. Please check fix-device-token-schema.md for instructions.");
+      }
     }
   };
 
@@ -644,7 +666,7 @@ export default function IndexPage() {
             <CardHeader className="pb-2 flex-shrink-0">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Customers</CardTitle>
-                <Button>
+                <Button onClick={() => setAddCustomerDialogOpen(true)}>
                   <Plus className="h-4 w-4" /> Add
                 </Button>
               </div>
@@ -1521,6 +1543,12 @@ export default function IndexPage() {
             </Tabs>
           </DialogContent>
         </Dialog>
+
+        {/* Add Customer Dialog */}
+        <AddCustomerDialog
+          open={addCustomerDialogOpen}
+          onOpenChange={setAddCustomerDialogOpen}
+        />
       </div>
     </>
   );

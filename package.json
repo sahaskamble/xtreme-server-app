@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"init": "neu update",
-		"start": "WEBKIT_DISABLE_DMABUF_RENDERER=1 neu run -- --window-enable-inspector=true",
+		"start": "neu run -- --window-enable-inspector=true",
 		"build": "neu build",
 		"vite-dev": "vite",
 		"vite-build": "vite build"

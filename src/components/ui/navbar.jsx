@@ -22,7 +22,8 @@ import {
   DollarSign,
   LogOut,
   User,
-  Database
+  Database,
+  MessageCircle
 } from 'lucide-react';
 import { ServerStatus } from './server-status';
 import {
@@ -118,7 +119,7 @@ const Navbar = ({ className }) => {
   };
 
   return (
-    <header className={cn("flex h-auto items-center border-b bg-background px-4 py-3", className)}>
+    <header className={cn("flex h-auto items-center border-b bg-background px-4 py-3 w-full min-h-[60px] relative z-50", className)}>
       <div className="flex items-center mr-6">
         <Link to="/" className="flex items-center">
           <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
@@ -183,6 +184,14 @@ const Navbar = ({ className }) => {
             label="SETTINGS"
             id="settings"
             active={activeTab === 'settings'}
+            onClick={setActiveTab}
+          />
+          <NavItem
+            href="/chat"
+            icon={MessageCircle}
+            label="CHAT"
+            id="chat"
+            active={activeTab === 'chat'}
             onClick={setActiveTab}
           />
         </div>

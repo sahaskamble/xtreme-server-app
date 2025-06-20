@@ -11,6 +11,7 @@ import AllLogs from './pages/(app)/all_logs/page';
 import ReportsPage from './pages/(app)/reports/page';
 import UsersPage from './pages/(app)/users/page';
 import SettingsPage from './pages/(app)/settings/page';
+import ChatPage from './pages/(app)/chat/page';
 import LoginPage from './pages/(auth)/login/page';
 import RegisterPage from './pages/(auth)/register/page';
 import IndexPage from './pages/page';
@@ -63,6 +64,7 @@ const router = createMemoryRouter([
 			{ path: 'reports', element: <ReportsPage /> },
 			{ path: 'users', element: <UsersPage /> },
 			{ path: 'settings', element: <SettingsPage /> },
+			{ path: 'chat', element: <ChatPage /> },
 		]
 	},
 	{
