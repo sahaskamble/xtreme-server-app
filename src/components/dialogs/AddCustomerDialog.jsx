@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, User, Mail, Phone, CreditCard } from 'lucide-react';
+import { Eye, EyeOff, User } from 'lucide-react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,66 +11,86 @@ import pb from '@/lib/pocketbase/pb';
 export default function AddCustomerDialog({ open, onOpenChange }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const form = useForm({
-    defaultValues: {
-      username: '',
-      name: '',
-      email: '',
-      password: '',
-      passwordConfirm: '',
-      role: 'User',
-      wallet: 0,
-      type: 'Post-Paid',
-      membership: 'Standard',
-      contact: ''
-    }
+  const [formData, setFormData] = useState({
+    username: '',
+    name: '',
+    email: '',
+    password: '',
+    passwordConfirm: '',
+    wallet: 0,
+    type: 'Post-Paid',
+    membership: 'Standard',
+    contact: ''
   });
+  const [errors, setErrors] = useState({});
 
-  const onSubmit = async (data) => {
+  const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? Number(value) : value
+    }));
+  };
+
+  const handleSelectChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'Full name is required';
+    if (!formData.username) newErrors.username = 'Username is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email address';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (!formData.passwordConfirm) newErrors.passwordConfirm = 'Please confirm password';
+    else if (formData.password !== formData.passwordConfirm) newErrors.passwordConfirm = "Passwords don't match";
+    return newErrors;
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
     try {
       setIsLoading(true);
-
-      // Validate password confirmation
-      if (data.password !== data.passwordConfirm) {
-        toast.error("Passwords don't match");
-        return;
-      }
-
-      // Create user first
-      const userData = {
-        username: data.username,
-        name: data.name, // Store name in user record
-        email: data.email,
+      // Create client (auth user) first
+      const clientData = {
+        username: formData.username,
+        name: formData.name,
+        email: formData.email,
         emailVisibility: true,
-        password: data.password,
-        passwordConfirm: data.passwordConfirm,
-        role: data.role
+        password: formData.password,
+        passwordConfirm: formData.passwordConfirm
       };
-
-      const createdUser = await pb.collection('users').create(userData);
-
-      // Create customer record
+      const createdClient = await pb.collection('clients').create(clientData);
+      // Create customer record with relation to client
       const customerData = {
-        user: createdUser.id,
-        wallet: parseFloat(data.wallet) || 0,
-        type: data.type,
-        membership: data.membership,
-        contact: data.contact
+        client: createdClient.id,
+        wallet: parseFloat(formData.wallet) || 0,
+        type: formData.type,
+        membership: formData.membership,
+        contact: formData.contact
       };
-
       await pb.collection('customers').create(customerData);
-
       toast.success("Customer added successfully!");
-      
-      // Reset form and close dialog
-      form.reset();
+      setFormData({
+        username: '',
+        name: '',
+        email: '',
+        password: '',
+        passwordConfirm: '',
+        wallet: 0,
+        type: 'Post-Paid',
+        membership: 'Standard',
+        contact: ''
+      });
+      setErrors({});
       onOpenChange(false);
-
     } catch (error) {
       console.error('Error creating customer:', error);
-      
-      // Handle specific error messages
       if (error.response?.data) {
         const errorData = error.response.data;
         if (errorData.username) {
@@ -89,13 +108,44 @@ export default function AddCustomerDialog({ open, onOpenChange }) {
     }
   };
 
+  const handleDialogOpenChange = (isOpen) => {
+    if (!isOpen) {
+      setFormData({
+        username: '',
+        name: '',
+        email: '',
+        password: '',
+        passwordConfirm: '',
+        wallet: 0,
+        type: 'Post-Paid',
+        membership: 'Standard',
+        contact: ''
+      });
+      setErrors({});
+      onOpenChange(false);
+    } else {
+      onOpenChange(true);
+    }
+  };
+
   const handleClose = () => {
-    form.reset();
+    setFormData({
+      username: '',
+      name: '',
+      email: '',
+      password: '',
+      passwordConfirm: '',
+      wallet: 0,
+      type: 'Post-Paid',
+      membership: 'Standard',
+      contact: ''
+    });
+    setErrors({});
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -106,89 +156,80 @@ export default function AddCustomerDialog({ open, onOpenChange }) {
             Create a new customer account with login credentials
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <form onSubmit={onSubmit} className="space-y-4 py-4">
           <div className="grid grid-cols-1 gap-4">
             {/* Personal Information */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Personal Information</h4>
-              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
                     id="name"
+                    name="name"
                     placeholder="Enter full name"
-                    {...form.register('name', { required: 'Full name is required' })}
+                    value={formData.name}
+                    onChange={handleChange}
                   />
-                  {form.formState.errors.name && (
-                    <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
                   )}
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="contact">Contact Number</Label>
                   <Input
                     id="contact"
+                    name="contact"
                     placeholder="Enter contact number"
-                    {...form.register('contact')}
+                    value={formData.contact}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
             </div>
-
             {/* Account Information */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Account Information</h4>
-              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username *</Label>
                   <Input
                     id="username"
+                    name="username"
                     placeholder="Enter username"
-                    {...form.register('username', { required: 'Username is required' })}
+                    value={formData.username}
+                    onChange={handleChange}
                   />
-                  {form.formState.errors.username && (
-                    <p className="text-sm text-destructive">{form.formState.errors.username.message}</p>
+                  {errors.username && (
+                    <p className="text-sm text-destructive">{errors.username}</p>
                   )}
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="Enter email address"
-                    {...form.register('email', { 
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address'
-                      }
-                    })}
+                    value={formData.email}
+                    onChange={handleChange}
                   />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">Password *</Label>
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter password"
-                      {...form.register('password', { 
-                        required: 'Password is required',
-                        minLength: {
-                          value: 6,
-                          message: 'Password must be at least 6 characters'
-                        }
-                      })}
+                      value={formData.password}
+                      onChange={handleChange}
                     />
                     <Button
                       type="button"
@@ -200,36 +241,35 @@ export default function AddCustomerDialog({ open, onOpenChange }) {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  {form.formState.errors.password && (
-                    <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
                   )}
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="passwordConfirm">Confirm Password *</Label>
                   <Input
                     id="passwordConfirm"
+                    name="passwordConfirm"
                     type="password"
                     placeholder="Confirm password"
-                    {...form.register('passwordConfirm', { required: 'Please confirm password' })}
+                    value={formData.passwordConfirm}
+                    onChange={handleChange}
                   />
-                  {form.formState.errors.passwordConfirm && (
-                    <p className="text-sm text-destructive">{form.formState.errors.passwordConfirm.message}</p>
+                  {errors.passwordConfirm && (
+                    <p className="text-sm text-destructive">{errors.passwordConfirm}</p>
                   )}
                 </div>
               </div>
             </div>
-
             {/* Customer Settings */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Customer Settings</h4>
-              
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">Payment Type</Label>
                   <Select
-                    value={form.watch('type')}
-                    onValueChange={(value) => form.setValue('type', value)}
+                    value={formData.type}
+                    onValueChange={value => handleSelectChange('type', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -240,12 +280,11 @@ export default function AddCustomerDialog({ open, onOpenChange }) {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="membership">Membership</Label>
                   <Select
-                    value={form.watch('membership')}
-                    onValueChange={(value) => form.setValue('membership', value)}
+                    value={formData.membership}
+                    onValueChange={value => handleSelectChange('membership', value)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -256,25 +295,22 @@ export default function AddCustomerDialog({ open, onOpenChange }) {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="wallet">Initial Wallet Balance (₹)</Label>
                   <Input
                     id="wallet"
+                    name="wallet"
                     type="number"
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    {...form.register('wallet', {
-                      valueAsNumber: true,
-                      min: 0
-                    })}
+                    value={formData.wallet}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
             </div>
           </div>
-
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel

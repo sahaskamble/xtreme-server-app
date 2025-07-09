@@ -27,11 +27,14 @@ export default function UsersPage() {
 		if (selectedData === 'Admins') {
 			setFilteredUsers(users?.filter((user) => user?.role === 'Admin'));
 		} else if (selectedData === 'Staffs') {
-			setFilteredUsers(users?.filter((user) => user?.role === 'Staff'));
+			// Filter for Staff role users who are NOT customers
+			const customerUserIds = customers?.map(customer => customer.user) || [];
+			setFilteredUsers(users?.filter((user) => user?.role === 'Staff' && !customerUserIds.includes(user.id)));
 		} else if (selectedData === 'Customers') {
-			setFilteredUsers(users?.filter((user) => user?.role === 'User'));
+			// For customers, we'll use the customers data directly, not filtered users
+			setFilteredUsers([]);
 		}
-	}, [users, selectedData]);
+	}, [users, selectedData, customers]);
 
 	const handleDialog = useCallback((dialogName) => {
 		try {
@@ -95,7 +98,7 @@ export default function UsersPage() {
 
 			{/* Dialogs for adding users */}
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="max-w-md">
+				<DialogContent className={dialogType === 'customer_add_dialog' ? "max-w-4xl max-h-[90vh] overflow-y-auto" : "max-w-md"}>
 					<DialogTitle>
 						{dialogType === 'admin_add_dialog' ? 'Add Admin' :
 						 dialogType === 'staff_add_dialog' ? 'Add Staff' :

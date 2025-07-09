@@ -42,9 +42,9 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Trash, Edit, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
 import pb from '@/lib/pocketbase/pb';
 import { Switch } from '@/components/ui/switch';
+import { useForm } from "react-hook-form";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("happy-hours");
@@ -58,6 +58,10 @@ export default function SettingsPage() {
   // Group pricing state
   const [openPricingDialog, setOpenPricingDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
+  const [groupName, setGroupName] = useState("");
+  const [groupType, setGroupType] = useState("");
+  const [groupPrice, setGroupPrice] = useState(0);
+  const [groupError, setGroupError] = useState({ name: "", type: "", price: "" });
 
   // Membership management state
   const [openMembershipDialog, setOpenMembershipDialog] = useState(false);
@@ -136,86 +140,14 @@ export default function SettingsPage() {
     queryParams: { expand: 'customer_id,recharge_id,recharged_by' }
   });
 
-  // Form for happy hour creation/editing
-  const form = useForm({
-    defaultValues: {
-      group: "",
-      days: "Monday",
-      start_time: "09:00",
-      end_time: "11:00",
-      discount_percentage: 10,
-      fixed_rate: 0,
-      status: "Active"
-    }
-  });
-
-  // Form for device creation/editing
-  const deviceForm = useForm({
-    defaultValues: {
-      name: "",
-      type: "PC",
-      group: "",
-      mac_address: "",
-      ip_address: "",
-      status: "Available",
-      powerOff: false,
-      reboot: false,
-      lock: false,
-      sleep: false
-    }
-  });
-
-  // Form for group pricing
-  const pricingForm = useForm({
-    defaultValues: {
-      price: 0
-    }
-  });
-
-  // Form for membership plan creation/editing
-  const membershipForm = useForm({
-    defaultValues: {
-      name: "",
-      price: 0,
-      duration: 30,
-      description: "",
-      features: [],
-      status: "Active"
-    }
-  });
-
-  // Form for membership assignment
-  const assignMembershipForm = useForm({
-    defaultValues: {
-      customer_id: "",
-      plan_id: "",
-      activated_on: new Date().toISOString().split('T')[0],
-      expires_on: ""
-    }
-  });
-
-  // Form for recharge plan creation/editing
-  const rechargeForm = useForm({
-    defaultValues: {
-      name: "",
-      price: 0,
-      value: 0,
-      note: "",
-      status: "Active",
-      base_rate: 0,
-      total_hours: 0
-    }
-  });
-
-  // Form for customer recharge
-  const customerRechargeForm = useForm({
-    defaultValues: {
-      customer_id: "",
-      recharge_id: "",
-      recharged_on: new Date().toISOString().split('T')[0],
-      note: "",
-      available_time: 0
-    }
+  // Fetch customers for membership and recharge features
+  const {
+    data: customers = [],
+    loading: customersLoading,
+    error: customersError
+  } = useRealTime('customers', {
+    fetchInitial: true,
+    queryParams: { expand: 'client' }
   });
 
   // Reset form when dialog closes
@@ -233,7 +165,7 @@ export default function SettingsPage() {
         });
       }
     }
-  }, [openHappyHourDialog, form, editingHappyHour]);
+  }, [openHappyHourDialog, editingHappyHour]);
 
   // Set form values when editing
   useEffect(() => {
@@ -358,39 +290,70 @@ export default function SettingsPage() {
 
   const handleEditGroupPricing = (group) => {
     setEditingGroup(group);
-    pricingForm.reset({
-      price: group.price || 0
-    });
+    setGroupName(group.name || "");
+    setGroupType(group.type || "");
+    setGroupPrice(group.price || 0);
+    setGroupError({ name: "", type: "", price: "" });
     setOpenPricingDialog(true);
   };
 
-  // Membership management functions
-  const onMembershipSubmit = async (data) => {
+  const handleAddGroup = () => {
+    setEditingGroup(null);
+    setGroupName("");
+    setGroupType("");
+    setGroupPrice(0);
+    setGroupError({ name: "", type: "", price: "" });
+    setOpenPricingDialog(true);
+  };
+
+  const handlePricingDialogClose = () => {
+    setOpenPricingDialog(false);
+    setEditingGroup(null);
+    setGroupName("");
+    setGroupType("");
+    setGroupPrice(0);
+    setGroupError({ name: "", type: "", price: "" });
+  };
+
+  const handlePricingSubmit = async (e) => {
+    e.preventDefault();
+    let error = { name: "", type: "", price: "" };
+    if (!groupName.trim()) error.name = "Group name is required";
+    if (!groupType) error.type = "Type is required";
+    if (
+      groupPrice === null ||
+      groupPrice === undefined ||
+      isNaN(groupPrice) ||
+      groupPrice < 0
+    ) {
+      error.price = "Price is required";
+    }
+    setGroupError(error);
+    if (error.name || error.type || error.price) return;
     try {
-      console.log("Submitting membership data:", data);
-
-      // Parse features as JSON array
-      const membershipData = {
-        ...data,
-        features: Array.isArray(data.features) ? data.features :
-                 typeof data.features === 'string' ? data.features.split(',').map(f => f.trim()) : []
-      };
-
-      if (editingMembership) {
-        const result = await pb.collection('membership_plans').update(editingMembership.id, membershipData);
-        console.log("Membership plan updated successfully:", result);
-        toast.success("Membership plan updated successfully!");
+      if (editingGroup) {
+        await pb.collection('groups').update(editingGroup.id, {
+          name: groupName,
+          type: groupType,
+          price: groupPrice,
+        });
+        toast.success("Group pricing updated successfully!");
       } else {
-        const result = await pb.collection('membership_plans').create(membershipData);
-        console.log("Membership plan created successfully:", result);
-        toast.success("Membership plan created successfully!");
+        await pb.collection('groups').create({
+          name: groupName,
+          type: groupType,
+          price: groupPrice,
+        });
+        toast.success("Group created successfully!");
       }
-      setOpenMembershipDialog(false);
-      setEditingMembership(null);
-      membershipForm.reset();
+      setOpenPricingDialog(false);
+      setEditingGroup(null);
+      setGroupName("");
+      setGroupType("");
+      setGroupPrice(0);
+      setGroupError({ name: "", type: "", price: "" });
     } catch (error) {
-      console.error("Error saving membership plan:", error);
-      toast.error("Failed to save membership plan. Please try again.");
+      toast.error("Failed to save group. Please try again.");
     }
   };
 
@@ -548,6 +511,129 @@ export default function SettingsPage() {
     }
   };
 
+  // Add this handler above your return
+  const handleDeleteGroup = async (id) => {
+    if (window.confirm("Are you sure you want to delete this group?")) {
+      try {
+        await pb.collection('groups').delete(id);
+        toast.success("Group deleted successfully!");
+      } catch (error) {
+        toast.error("Failed to delete group. Please try again.");
+      }
+    }
+  };
+
+  const onMembershipSubmit = async (data) => {
+    try {
+      if (editingMembership) {
+        await pb.collection('membership_plans').update(editingMembership.id, data);
+        toast.success("Membership plan updated successfully!");
+      } else {
+        await pb.collection('membership_plans').create(data);
+        toast.success("Membership plan created successfully!");
+      }
+      setOpenMembershipDialog(false);
+      setEditingMembership(null);
+      membershipForm.reset();
+    } catch (error) {
+      toast.error("Failed to save membership plan. Please try again.");
+    }
+  };
+
+  // Device Dialog State (useState instead of useForm)
+  const [deviceName, setDeviceName] = useState("");
+  const [deviceType, setDeviceType] = useState("");
+  const [deviceGroup, setDeviceGroup] = useState("");
+  const [deviceMac, setDeviceMac] = useState("");
+  const [deviceIp, setDeviceIp] = useState("");
+  const [deviceStatus, setDeviceStatus] = useState("");
+  const [devicePowerOff, setDevicePowerOff] = useState(false);
+  const [deviceLock, setDeviceLock] = useState(false);
+  const [deviceSleep, setDeviceSleep] = useState(false);
+  const [deviceReboot, setDeviceReboot] = useState(false);
+  const [deviceError, setDeviceError] = useState({});
+
+  // Reset device dialog state
+  const resetDeviceDialog = () => {
+    setDeviceName("");
+    setDeviceType("");
+    setDeviceGroup("");
+    setDeviceMac("");
+    setDeviceIp("");
+    setDeviceStatus("");
+    setDevicePowerOff(false);
+    setDeviceLock(false);
+    setDeviceSleep(false);
+    setDeviceReboot(false);
+    setDeviceError({});
+  };
+
+  // Open Device Dialog for Add/Edit
+  const handleOpenDeviceDialog = (device = null) => {
+    if (device) {
+      setDeviceName(device.name || "");
+      setDeviceType(device.type || "");
+      setDeviceGroup(device.group || "");
+      setDeviceMac(device.mac_address || "");
+      setDeviceIp(device.ip_address || "");
+      setDeviceStatus(device.status || "");
+      setDevicePowerOff(!!device.powerOff);
+      setDeviceLock(!!device.lock);
+      setDeviceSleep(!!device.sleep);
+      setDeviceReboot(!!device.reboot);
+      setDeviceError({});
+    } else {
+      resetDeviceDialog();
+    }
+    setEditingDevice(device);
+    setOpenDeviceDialog(true);
+  };
+
+  // Device Dialog Submit Handler
+  const handleDeviceSubmit = (e) => {
+    e.preventDefault();
+    let errors = {};
+    if (!deviceName) errors.name = "Device name is required";
+    if (!deviceType) errors.type = "Device type is required";
+    if (!deviceGroup) errors.group = "Device group is required";
+    if (!deviceStatus) errors.status = "Device status is required";
+    setDeviceError(errors);
+    if (Object.keys(errors).length > 0) return;
+    const deviceData = {
+      name: deviceName,
+      type: deviceType,
+      group: deviceGroup,
+      mac_address: deviceMac,
+      ip_address: deviceIp,
+      status: deviceStatus,
+      powerOff: devicePowerOff,
+      lock: deviceLock,
+      sleep: deviceSleep,
+      reboot: deviceReboot,
+    };
+    if (editingDevice) {
+      // Update device logic here
+      // updateDevice(editingDevice.id, deviceData);
+    } else {
+      // Add device logic here
+      // addDevice(deviceData);
+    }
+    setOpenDeviceDialog(false);
+    resetDeviceDialog();
+  };
+
+  const form = useForm({
+    defaultValues: {
+      group: "",
+      days: "Monday",
+      start_time: "09:00",
+      end_time: "11:00",
+      discount_percentage: 10,
+      fixed_rate: 0,
+      status: "Active"
+    }
+  });
+
   return (
     <div className="mx-auto p-4">
       <Card className="w-full">
@@ -585,12 +671,12 @@ export default function SettingsPage() {
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : happyHoursError ? (
-                <div className="text-destructive text-center py-8">
-                  Error loading happy hours
+                <div className="text-center text-muted-foreground py-8">
+                  No happy hours found. Start by adding a new happy hour!
                 </div>
               ) : happyHours.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  No happy hours configured
+                  No happy hours configured. Click "Add Happy Hour" to create one.
                 </div>
               ) : (
                 <div className="border rounded-md">
@@ -652,8 +738,14 @@ export default function SettingsPage() {
             <TabsContent value="pricing" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Group Pricing Management</h3>
+                <Button onClick={() => {
+                  setEditingGroup(null);
+                  pricingForm.reset({ name: '', type: '', price: 0 });
+                  setOpenPricingDialog(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Group
+                </Button>
               </div>
-
               {groupsLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -682,15 +774,24 @@ export default function SettingsPage() {
                         <TableRow key={group.id}>
                           <TableCell className="font-medium">{group.name}</TableCell>
                           <TableCell>{group.type}</TableCell>
-                          <TableCell>₹{group.price || 0}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditGroupPricing(group)}
-                            >
-                              <DollarSign className="h-4 w-4" />
-                            </Button>
+                          <TableCell>{group.price}</TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditGroupPricing(group)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteGroup(group.id)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1228,7 +1329,10 @@ export default function SettingsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={deviceForm.handleSubmit(onDeviceSubmit)} className="space-y-4 py-4">
+          <form
+            onSubmit={handleDeviceSubmit}
+            className="space-y-4 py-4"
+          >
             <div className="grid grid-cols-1 gap-4">
               {/* Device Name */}
               <div className="space-y-2">
@@ -1236,10 +1340,11 @@ export default function SettingsPage() {
                 <Input
                   id="device-name"
                   placeholder="Enter device name"
-                  {...deviceForm.register('name', { required: 'Device name is required' })}
+                  value={deviceName}
+                  onChange={e => setDeviceName(e.target.value)}
                 />
-                {deviceForm.formState.errors.name && (
-                  <p className="text-sm text-destructive">{deviceForm.formState.errors.name.message}</p>
+                {deviceError.name && (
+                  <p className="text-sm text-destructive">{deviceError.name}</p>
                 )}
               </div>
 
@@ -1248,8 +1353,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="device-type">Device Type</Label>
                   <Select
-                    value={deviceForm.watch('type')}
-                    onValueChange={(value) => deviceForm.setValue('type', value)}
+                    value={deviceType}
+                    onValueChange={setDeviceType}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1266,8 +1371,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="device-group">Device Group</Label>
                   <Select
-                    value={deviceForm.watch('group')}
-                    onValueChange={(value) => deviceForm.setValue('group', value)}
+                    value={deviceGroup}
+                    onValueChange={setDeviceGroup}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a group" />
@@ -1290,7 +1395,8 @@ export default function SettingsPage() {
                   <Input
                     id="mac-address"
                     placeholder="00:00:00:00:00:00"
-                    {...deviceForm.register('mac_address')}
+                    value={deviceMac}
+                    onChange={e => setDeviceMac(e.target.value)}
                   />
                 </div>
 
@@ -1299,7 +1405,8 @@ export default function SettingsPage() {
                   <Input
                     id="ip-address"
                     placeholder="192.168.1.100"
-                    {...deviceForm.register('ip_address')}
+                    value={deviceIp}
+                    onChange={e => setDeviceIp(e.target.value)}
                   />
                 </div>
               </div>
@@ -1308,8 +1415,8 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="device-status">Status</Label>
                 <Select
-                  value={deviceForm.watch('status')}
-                  onValueChange={(value) => deviceForm.setValue('status', value)}
+                  value={deviceStatus}
+                  onValueChange={setDeviceStatus}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1332,7 +1439,8 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       id="powerOff"
-                      {...deviceForm.register('powerOff')}
+                      checked={devicePowerOff}
+                      onChange={e => setDevicePowerOff(e.target.checked)}
                       className="rounded border border-input"
                     />
                     <Label htmlFor="powerOff" className="text-sm">Power Off</Label>
@@ -1342,7 +1450,8 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       id="lock"
-                      {...deviceForm.register('lock')}
+                      checked={deviceLock}
+                      onChange={e => setDeviceLock(e.target.checked)}
                       className="rounded border border-input"
                     />
                     <Label htmlFor="lock" className="text-sm">Locked</Label>
@@ -1352,7 +1461,8 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       id="sleep"
-                      {...deviceForm.register('sleep')}
+                      checked={deviceSleep}
+                      onChange={e => setDeviceSleep(e.target.checked)}
                       className="rounded border border-input"
                     />
                     <Label htmlFor="sleep" className="text-sm">Sleep Mode</Label>
@@ -1362,7 +1472,8 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       id="reboot"
-                      {...deviceForm.register('reboot')}
+                      checked={deviceReboot}
+                      onChange={e => setDeviceReboot(e.target.checked)}
                       className="rounded border border-input"
                     />
                     <Label htmlFor="reboot" className="text-sm">Reboot Required</Label>
@@ -1380,17 +1491,48 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Group Pricing Dialog */}
+      {/* Group Pricing Dialog for Add/Edit */}
       <Dialog open={openPricingDialog} onOpenChange={setOpenPricingDialog}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Update Group Pricing</DialogTitle>
+            <DialogTitle>{editingGroup ? 'Edit Group Pricing' : 'Add New Group'}</DialogTitle>
             <DialogDescription>
-              Update the hourly rate for {editingGroup?.name}
+              {editingGroup ? `Update the hourly rate for ${editingGroup?.name}` : 'Create a new group and set its hourly rate.'}
             </DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={pricingForm.handleSubmit(onPricingSubmit)} className="space-y-4 py-4">
+          <form onSubmit={handlePricingSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="group-name">Group Name *</Label>
+              <Input
+                id="group-name"
+                placeholder="Enter group name"
+                value={groupName}
+                onChange={e => setGroupName(e.target.value)}
+              />
+              {groupError.name && (
+                <p className="text-sm text-destructive">{groupError.name}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="group-type">Type *</Label>
+              <Select
+                value={groupType}
+                onValueChange={setGroupType}
+              >
+                <SelectTrigger id="group-type">
+                  <SelectValue placeholder="Select group type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PC">PC</SelectItem>
+                  <SelectItem value="PS">PS</SelectItem>
+                  <SelectItem value="SIM">SIM</SelectItem>
+                  <SelectItem value="VR">VR</SelectItem>
+                </SelectContent>
+              </Select>
+              {groupError.type && (
+                <p className="text-sm text-destructive">{groupError.type}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="group-price">Price per Hour (₹)</Label>
               <Input
@@ -1399,20 +1541,16 @@ export default function SettingsPage() {
                 min="0"
                 step="0.01"
                 placeholder="Enter price per hour"
-                {...pricingForm.register('price', {
-                  required: 'Price is required',
-                  valueAsNumber: true,
-                  min: 0
-                })}
+                value={groupPrice}
+                onChange={e => setGroupPrice(Number(e.target.value))}
               />
-              {pricingForm.formState.errors.price && (
-                <p className="text-sm text-destructive">{pricingForm.formState.errors.price.message}</p>
+              {groupError.price && (
+                <p className="text-sm text-destructive">{groupError.price}</p>
               )}
             </div>
-
             <DialogFooter>
               <Button type="submit">
-                Update Price
+                {editingGroup ? 'Update Group' : 'Add Group'}
               </Button>
             </DialogFooter>
           </form>

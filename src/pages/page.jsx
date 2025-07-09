@@ -126,7 +126,8 @@ export default function IndexPage() {
     error: customersError
   } = useRealTime('customers', {
     // Handle errors gracefully
-    fetchInitial: true
+    fetchInitial: true,
+    queryParams: { expand: 'client' }
   });
 
   const {
@@ -654,7 +655,7 @@ export default function IndexPage() {
     }
   };
 
-  console.log(deviceGroups);
+  console.log(customers);
 
   return (
     <>
@@ -716,7 +717,7 @@ export default function IndexPage() {
                                 onClick={() => handleCustomerSelect(customer)}
                               >
                                 <TableCell className="py-2 px-2 w-[25%]">
-                                  <div className="font-medium">{customer.name || 'Unknown'}</div>
+                                  <div className="font-medium">{customer?.expand?.client?.name || 'Unknown'}</div>
                                 </TableCell>
                                 <TableCell className="py-2 px-2 w-[20%]">
                                   <div className="text-sm">{customer.contact || 'No contact'}</div>
